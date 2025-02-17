@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'git@github.com:bgrebennikov/frontend-ci.git'
+                sh 'git clone git@github.com:bgrebennikov/frontend-ci.git'
             }
         }
 
