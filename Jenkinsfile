@@ -10,6 +10,7 @@ pipeline {
     stages {
         stage('Git Init'){
             steps{
+                sh 'ssh-keyscan github.com >> ~/.ssh/known_hosts'
                 sh 'ssh -T git@github.com'
             }
         }
