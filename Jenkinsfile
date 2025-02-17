@@ -11,7 +11,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                sh 'git clone git@github.com:bgrebennikov/frontend-ci.git'
+                sh 'git pull'
             }
         }
 
