@@ -2,30 +2,35 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'frontend'
-        CONTAINER_NAME = 'frontend-container'
-        TEMP_CONTAINER_NAME = 'frontend-container-new'
-        NETWORK_NAME = 'frontend-network'
-        PORT_MAPPING_OLD = '3000:3000'
-        PORT_MAPPING_NEW = '3001:3000'
+        IMAGE_NAME = 'frontend' // Имя Docker-образа
+        CONTAINER_NAME = 'frontend-container' // Имя контейнера
+        PORT_MAPPING = '3000:3000' // Проброс портов
+        OLD_PORT = '8080' // Старый порт
+        TEMP_CONTAINER_NAME = 'frontend-container-new' // Временное имя нового контейнера
     }
 
     stages {
-        stage('Create Network') {
+        stage('Checkout') {
             steps {
-                script {
-                    sh """
-                        echo "🔧 Проверка или создание сети ${NETWORK_NAME}"
-                        docker network inspect ${NETWORK_NAME} >/dev/null 2>&1 || docker network create ${NETWORK_NAME}
-                    """
-                }
+                checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:latest ."
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
+            }
+        }
+
+        stage('Stop and Remove Old Container') {
+            steps {
+                script {
+                    sh """
+                        docker stop ${CONTAINER_NAME} 2>/dev/null || true
+                        docker rm ${CONTAINER_NAME} 2>/dev/null || true
+                    """
                 }
             }
         }
@@ -33,10 +38,7 @@ pipeline {
         stage('Run New Container') {
             steps {
                 script {
-                    sh """
-                        echo "🚀 Запуск нового контейнера ${TEMP_CONTAINER_NAME} на порту 3001"
-                        docker run -d --rm --name ${TEMP_CONTAINER_NAME} --network=${NETWORK_NAME} -p ${PORT_MAPPING_NEW} ${IMAGE_NAME}:latest
-                    """
+                    sh "docker run -d --name ${TEMP_CONTAINER_NAME} -p ${PORT_MAPPING} ${IMAGE_NAME}:latest"
                 }
             }
         }
@@ -45,21 +47,21 @@ pipeline {
             steps {
                 script {
                     sh """
-                        echo "🔁 Переключение контейнера..."
+                        echo "🛑 Остановка старого контейнера ${CONTAINER_NAME}"
+                        docker stop ${CONTAINER_NAME} 2>/dev/null || true
+                        docker rm ${CONTAINER_NAME} 2>/dev/null || true
 
-                        # Проверяем, есть ли старый контейнер
-                        if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-                            echo "🛑 Остановка старого контейнера ${CONTAINER_NAME}"
-                            docker stop ${CONTAINER_NAME} || true
-                            docker rm ${CONTAINER_NAME} || true
+                        echo "🔁 Переключение на новый контейнер ${TEMP_CONTAINER_NAME} на порту ${OLD_PORT}"
+
+                        # Проверка, существует ли контейнер с таким именем
+                        if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}\$"; then
+                            echo "Контейнер ${CONTAINER_NAME} уже работает."
+                        else
+                            echo "Контейнер ${CONTAINER_NAME} не найден, начинаю создание нового."
+                            docker network disconnect frontend-network ${TEMP_CONTAINER_NAME} || true
+                            docker network connect frontend-network ${TEMP_CONTAINER_NAME}
+                            docker run -d --name ${CONTAINER_NAME} -p ${OLD_PORT}:3000 ${IMAGE_NAME}:latest
                         fi
-
-                        echo "🔗 Подключение нового контейнера к сети ${NETWORK_NAME}"
-                        docker network disconnect ${NETWORK_NAME} ${TEMP_CONTAINER_NAME} || true
-                        docker network connect ${NETWORK_NAME} ${TEMP_CONTAINER_NAME}
-
-                        echo "🔄 Переименование контейнера"
-                        docker rename ${TEMP_CONTAINER_NAME} ${CONTAINER_NAME}
                     """
                 }
             }
