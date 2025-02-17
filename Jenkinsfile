@@ -8,10 +8,9 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
-                sh 'git pull'
+                checkout scm
             }
         }
 
@@ -27,8 +26,8 @@ pipeline {
             steps {
                 script {
                     sh """
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
+                        docker stop ${CONTAINER_NAME} 2>/dev/null || true
+                        docker rm ${CONTAINER_NAME} 2>/dev/null || true
                     """
                 }
             }
@@ -37,7 +36,7 @@ pipeline {
         stage('Run New Container') {
             steps {
                 script {
-                    sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT_MAPPING} ${IMAGE_NAME}"
+                    sh "docker run -d --rm --name ${CONTAINER_NAME} -p ${PORT_MAPPING} ${IMAGE_NAME}"
                 }
             }
         }
