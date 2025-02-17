@@ -8,6 +8,11 @@ pipeline {
     }
 
     stages {
+        stage('Git Init'){
+            steps{
+                sh 'ssh -T git@github.com'
+            }
+        }
         stage('Checkout') {
             steps {
                 sh 'git clone git@github.com:bgrebennikov/frontend-ci.git'
