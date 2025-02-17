@@ -1,21 +1,53 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = 'frontend' // Имя Docker-образа
+        CONTAINER_NAME = 'frontend-container' // Имя контейнера
+        PORT_MAPPING = '8080:80' // Проброс портов
+    }
+
     stages {
-        stage('Build') {
+        stage('Checkout') {
             steps {
-                echo 'Building...'
+                git branch: 'main', url: 'https://github.com/bgrebennikov/frontend-ci.git'
             }
         }
-        stage('Test') {
+
+        stage('Build Docker Image') {
             steps {
-                echo 'Testing...'
+                script {
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
             }
         }
-        stage('Deploy') {
+
+        stage('Stop and Remove Old Container') {
             steps {
-                echo 'Deploying....'
+                script {
+                    sh """
+                        docker stop ${CONTAINER_NAME} || true
+                        docker rm ${CONTAINER_NAME} || true
+                    """
+                }
             }
+        }
+
+        stage('Run New Container') {
+            steps {
+                script {
+                    sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT_MAPPING} ${IMAGE_NAME}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Развертывание завершено успешно!"
+        }
+        failure {
+            echo "❌ Ошибка при развертывании!"
         }
     }
 }
