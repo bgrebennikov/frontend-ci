@@ -7,7 +7,7 @@ COPY package*.json ./
 
 COPY . .
 
-ENV BUILD_TYPE="STAGGING"
+ENV BUILD_TYPE="PRODUCTION"
 
 RUN npm install
 
