@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/bgrebennikov/frontend-ci.git'
+                git branch: 'main', url: 'git@github.com:bgrebennikov/frontend-ci.git'
             }
         }
 
