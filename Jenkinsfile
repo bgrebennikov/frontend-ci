@@ -3,9 +3,10 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'frontend' // Имя Docker-образа
-        CONTAINER_NAME = 'frontend-container' // Основной контейнер
+        CONTAINER_NAME = 'frontend-container' // Текущий контейнер
         TEMP_CONTAINER_NAME = 'frontend-container-new' // Временный контейнер
-        PORT_MAPPING = '3000:3000' // Проброс портов
+        OLD_PORT = '3000' // Основной порт
+        TEMP_PORT = '3001' // Временный порт для теста
     }
 
     stages {
@@ -23,12 +24,26 @@ pipeline {
             }
         }
 
-        stage('Run New Container') {
+        stage('Run New Container on Temporary Port') {
             steps {
                 script {
                     sh """
-                        echo "🚀 Запуск нового контейнера ${TEMP_CONTAINER_NAME}"
-                        docker run -d --name ${TEMP_CONTAINER_NAME} -p ${PORT_MAPPING} ${IMAGE_NAME}:latest
+                        echo "🚀 Запуск нового контейнера ${TEMP_CONTAINER_NAME} на порту ${TEMP_PORT}"
+                        docker run -d --name ${TEMP_CONTAINER_NAME} -p ${TEMP_PORT}:3000 ${IMAGE_NAME}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Wait and Test New Container') {
+            steps {
+                script {
+                    sh """
+                        echo "⏳ Ожидание запуска нового контейнера..."
+                        sleep 5
+
+                        echo "🔍 Проверка работоспособности нового контейнера..."
+                        curl --fail http://localhost:${TEMP_PORT} || (echo "❌ Новый контейнер не отвечает!" && exit 1)
                     """
                 }
             }
@@ -42,8 +57,10 @@ pipeline {
                         docker stop ${CONTAINER_NAME} 2>/dev/null || true
                         docker rm ${CONTAINER_NAME} 2>/dev/null || true
 
-                        echo "🔁 Переключение контейнера"
-                        docker rename ${TEMP_CONTAINER_NAME} ${CONTAINER_NAME}
+                        echo "🔁 Перезапуск нового контейнера на основном порту ${OLD_PORT}"
+                        docker stop ${TEMP_CONTAINER_NAME} || true
+                        docker rm ${TEMP_CONTAINER_NAME} || true
+                        docker run -d --name ${CONTAINER_NAME} -p ${OLD_PORT}:3000 ${IMAGE_NAME}:latest
                     """
                 }
             }
