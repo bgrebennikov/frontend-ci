@@ -15,7 +15,7 @@ const Home = async () => {
     return (
         <div>
             <h1 className="text-2xl">
-                Env: {process.env.BUILD_TYPE ?? 'Not Found '}
+                Env: {process.env.BUILD_TYPE ?? 'Not Found'}
             </h1>
             {domain ? `Page ID: ${domain}` : 'Not Subdomain'}
         </div>
