@@ -24,6 +24,18 @@ pipeline {
             }
         }
 
+        stage('Remove Old Temporary Container') {
+            steps {
+                script {
+                    sh """
+                        echo "🛑 Удаление старого временного контейнера ${TEMP_CONTAINER_NAME} (если есть)"
+                        docker stop ${TEMP_CONTAINER_NAME} 2>/dev/null || true
+                        docker rm ${TEMP_CONTAINER_NAME} 2>/dev/null || true
+                    """
+                }
+            }
+        }
+
         stage('Run New Container on Temporary Port') {
             steps {
                 script {
