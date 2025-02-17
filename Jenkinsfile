@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME = 'frontend' // Имя Docker-образа
         CONTAINER_NAME = 'frontend-container' // Имя контейнера
         PORT_MAPPING = '3000:3000' // Проброс портов
+        BUILD_TYPE='PRODUCTION'
     }
 
     stages {
