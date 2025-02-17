@@ -1,0 +1,10 @@
+{
+  "HomePage": {
+    "привет": "Hello",
+    "Как у тебя дела?": "How are you doing?",
+
+    "doctor": "— Doctor, I have a bad memory!",
+    "since_when": "— Since when?",
+    "what_since_when": "— What since when?"
+  }
+}
