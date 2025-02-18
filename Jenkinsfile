@@ -2,15 +2,28 @@ pipeline {
     agent any
     environment {
         DOCKER_IMAGE_NAME = 'frontend-prod'
-        DOCKER_IMAGE_TAG = 'latest'  // или можешь использовать Git commit или version
+        DOCKER_IMAGE_TAG = 'latest'  // можешь использовать commit hash или другую версию
         FRONTEND_CONTAINER_NAME = 'frontend-prod'
         FRONTEND_TEST_CONTAINER_NAME = 'frontend-test'
         NGINX_CONTAINER_NAME = 'nginx'
+        DOCKER_NETWORK = 'frontend-network'
     }
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Create Docker Network') {
+            steps {
+                script {
+                    echo 'Creating Docker network if not exists...'
+                    // Проверяем, существует ли сеть, если нет, создаем её
+                    sh """
+                    docker network inspect ${DOCKER_NETWORK} || docker network create ${DOCKER_NETWORK}
+                    """
+                }
             }
         }
 
@@ -30,7 +43,7 @@ pipeline {
                     echo 'Deploying new (green) frontend container...'
                     // Запуск нового контейнера с новым образом (Green)
                     sh """
-                    docker run -d --name ${FRONTEND_CONTAINER_NAME}-green --network mynetwork -p 3002:3000 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+                    docker run -d --name ${FRONTEND_CONTAINER_NAME}-green --network ${DOCKER_NETWORK} -p 3002:3000 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     """
                 }
             }
@@ -42,7 +55,8 @@ pipeline {
                     echo 'Updating Nginx configuration to point to the new (green) container...'
                     // Обновляем конфигурацию Nginx для направления трафика на новый контейнер (Green)
                     sh """
-                    sed -i 's/frontend-prod:3000/${FRONTEND_CONTAINER_NAME}-green:3000/' /etc/nginx/nginx.conf
+                    sed -i 's/frontend-prod:3000/${FRONTEND_CONTAINER_NAME}-green:3000/' ./nginx.conf
+                    docker cp ./nginx.conf ${NGINX_CONTAINER_NAME}:/etc/nginx/nginx.conf
                     docker exec ${NGINX_CONTAINER_NAME} nginx -s reload
                     """
                 }
@@ -63,9 +77,10 @@ pipeline {
             steps {
                 script {
                     echo 'Switching traffic to new (green) frontend container...'
-                    // Переключаем трафик на новый контейнер
+                    // Переключаем трафик на новый контейнер (Green)
                     sh """
-                    sed -i 's/frontend-prod:3000/${FRONTEND_CONTAINER_NAME}-green:3000/' /etc/nginx/nginx.conf
+                    sed -i 's/frontend-prod:3000/${FRONTEND_CONTAINER_NAME}-green:3000/' ./nginx.conf
+                    docker cp ./nginx.conf ${NGINX_CONTAINER_NAME}:/etc/nginx/nginx.conf
                     docker exec ${NGINX_CONTAINER_NAME} nginx -s reload
                     """
                 }
