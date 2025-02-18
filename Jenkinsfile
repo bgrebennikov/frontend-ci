@@ -55,15 +55,25 @@ pipeline {
             steps {
                 script {
                     echo 'Updating Nginx configuration to point to the new (green) container...'
-                    // Обновляем конфигурацию Nginx для направления трафика на новый контейнер (Green)
-                    sh """
-                    sed -i 's/frontend-prod:3000/${FRONTEND_CONTAINER_NAME}-green:3000/' ./nginx.conf
-                    docker cp ./nginx.conf ${NGINX_CONTAINER_NAME}:/etc/nginx/nginx.conf
-                    docker exec ${NGINX_CONTAINER_NAME} nginx -s reload
-                    """
+
+                    // Проверяем, существует ли контейнер nginx
+                    def nginxRunning = sh(script: "docker ps -q -f name=nginx", returnStdout: true).trim()
+
+                    if (nginxRunning) {
+                        // Если контейнер nginx работает, копируем обновленную конфигурацию
+                        sh """
+                        sed -i 's/frontend-prod:3000/${FRONTEND_CONTAINER_NAME}-green-${UNIQUE_ID}:3000/' ./nginx.conf
+                        docker cp ./nginx.conf ${NGINX_CONTAINER_NAME}:/etc/nginx/nginx.conf
+                        docker exec ${NGINX_CONTAINER_NAME} nginx -s reload
+                        """
+                    } else {
+                        // Если контейнер nginx не запущен, выводим ошибку и запускаем его
+                        error "Nginx container is not running. Please check your setup."
+                    }
                 }
             }
         }
+
 
         stage('Test Green Container') {
             steps {
