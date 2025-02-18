@@ -7,8 +7,6 @@ COPY package*.json ./
 
 COPY . .
 
-ENV BUILD_TYPE="PRODUCTION"
-
 RUN npm install
 
 RUN npm run build
