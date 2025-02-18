@@ -41,13 +41,15 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying new (green) frontend container...'
-                    // Запуск нового контейнера с новым образом (Green)
+                    // Удаляем старый контейнер (если существует), чтобы избежать конфликта имен
                     sh """
+                    docker rm -f ${FRONTEND_CONTAINER_NAME}-green || true
                     docker run -d --name ${FRONTEND_CONTAINER_NAME}-green --network ${DOCKER_NETWORK} -p 3002:3000 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
                     """
                 }
             }
         }
+
 
         stage('Update Nginx Config') {
             steps {
